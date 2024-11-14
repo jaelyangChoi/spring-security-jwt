@@ -1,6 +1,7 @@
 package my.study.spring_security_jwt.config;
 
 import lombok.RequiredArgsConstructor;
+import my.study.spring_security_jwt.jwt.JWTUtil;
 import my.study.spring_security_jwt.jwt.LoginFilter;
 import org.apache.catalina.User;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
+    private final JWTUtil jwtUtil;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
@@ -50,7 +52,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated());
 
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration))
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil)
                         , UsernamePasswordAuthenticationFilter.class);
 
         //세션 설정
