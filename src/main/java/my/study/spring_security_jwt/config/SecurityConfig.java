@@ -1,9 +1,9 @@
 package my.study.spring_security_jwt.config;
 
 import lombok.RequiredArgsConstructor;
+import my.study.spring_security_jwt.jwt.JWTFilter;
 import my.study.spring_security_jwt.jwt.JWTUtil;
 import my.study.spring_security_jwt.jwt.LoginFilter;
-import org.apache.catalina.User;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -52,8 +52,13 @@ public class SecurityConfig {
                         .anyRequest().authenticated());
 
         http
+                .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
+
+        http
                 .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil)
                         , UsernamePasswordAuthenticationFilter.class);
+
+
 
         //세션 설정
         http
