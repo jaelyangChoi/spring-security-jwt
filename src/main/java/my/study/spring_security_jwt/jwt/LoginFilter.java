@@ -7,6 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import my.study.spring_security_jwt.dto.CustomUserDetails;
+import my.study.spring_security_jwt.entity.RefreshToken;
+import my.study.spring_security_jwt.repository.RefreshTokenRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,12 +17,14 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.IOException;
+import java.util.Date;
 
 @RequiredArgsConstructor
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
@@ -44,6 +48,9 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String accessToken = jwtUtil.createJwt("access", username, authority, 1000 * 60 * 10L);
         String refreshToken = jwtUtil.createJwt("refresh", username, authority, 1000 * 60 * 60 * 24L);
 
+        //Refresh token 저장
+        saveRefreshToken(username, refreshToken, 1000 * 60 * 60 * 24L);
+
         //발급 토큰 응답
         response.setHeader("access", accessToken); //헤더에 발급 후 프론트에서 로컬 스토리지 저장
         response.addCookie(createCookie("refresh", refreshToken));
@@ -54,6 +61,17 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    private void saveRefreshToken(String username, String refreshToken, Long expiredMs) {
+        Date expireDate = new Date(System.currentTimeMillis() + expiredMs);
+
+        RefreshToken tokenEntity = new RefreshToken();
+        tokenEntity.setUsername(username);
+        tokenEntity.setRefreshToken(refreshToken);
+        tokenEntity.setExpiration(expireDate.toString());
+
+        refreshTokenRepository.save(tokenEntity);
     }
 
     private Cookie createCookie(String key, String value) {

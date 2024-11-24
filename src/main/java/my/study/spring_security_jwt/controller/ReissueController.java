@@ -6,17 +6,22 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import my.study.spring_security_jwt.entity.RefreshToken;
 import my.study.spring_security_jwt.jwt.JWTUtil;
+import my.study.spring_security_jwt.repository.RefreshTokenRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Date;
 
 @RestController
 @RequiredArgsConstructor
 public class ReissueController {
 
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @PostMapping("/reissue")
     public ResponseEntity<?> reissue(HttpServletRequest request, HttpServletResponse response) {
@@ -43,6 +48,10 @@ public class ReissueController {
             return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
 
 
+        //DB에 저장되어 있는지 확인
+        if (!refreshTokenRepository.existsByRefreshToken(refreshToken))
+            return new ResponseEntity<>("invalid refresh token", HttpStatus.BAD_REQUEST);
+
         //새로운 토큰 생성
         String username = jwtUtil.getUsername(refreshToken);
         String role = jwtUtil.getRole(refreshToken);
@@ -50,7 +59,9 @@ public class ReissueController {
         String newAccessToken = jwtUtil.createJwt("access", username, role, 100 * 60 * 10L);
         String newRefreshToken = jwtUtil.createJwt("refresh", username, role, 100 * 60 * 60 * 24L);
 
-        //TODO : Refresh 토큰 블랙리스트 처리 로직
+        //Refresh 토큰 저장
+        refreshTokenRepository.deleteByRefreshToken(refreshToken);
+        saveRefreshToken(username, newRefreshToken, 100 * 60 * 60 * 24L);
 
         response.setHeader("access", newAccessToken);
         response.addCookie(createCookie("refresh", newRefreshToken));
@@ -65,4 +76,16 @@ public class ReissueController {
         cookie.setHttpOnly(true); //JS로 쿠키 접근 불가
         return cookie;
     }
+
+    private void saveRefreshToken(String username, String refreshToken, Long expiredMs) {
+        Date expireDate = new Date(System.currentTimeMillis() + expiredMs);
+
+        RefreshToken tokenEntity = new RefreshToken();
+        tokenEntity.setUsername(username);
+        tokenEntity.setRefreshToken(refreshToken);
+        tokenEntity.setExpiration(expireDate.toString());
+
+        refreshTokenRepository.save(tokenEntity);
+    }
+
 }

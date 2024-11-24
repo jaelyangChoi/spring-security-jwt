@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import my.study.spring_security_jwt.jwt.JWTFilter;
 import my.study.spring_security_jwt.jwt.JWTUtil;
 import my.study.spring_security_jwt.jwt.LoginFilter;
+import my.study.spring_security_jwt.repository.RefreshTokenRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +29,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
@@ -81,7 +83,7 @@ public class SecurityConfig {
                 .addFilterBefore(new JWTFilter(jwtUtil), LoginFilter.class);
 
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil)
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil, refreshTokenRepository)
                         , UsernamePasswordAuthenticationFilter.class);
 
         //세션 설정
