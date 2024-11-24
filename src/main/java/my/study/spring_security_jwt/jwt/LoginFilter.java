@@ -45,7 +45,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String refreshToken = jwtUtil.createJwt("refresh", username, authority, 1000 * 60 * 60 * 24L);
 
         //발급 토큰 응답
-        response.setHeader("access", accessToken);
+        response.setHeader("access", accessToken); //헤더에 발급 후 프론트에서 로컬 스토리지 저장
         response.addCookie(createCookie("refresh", refreshToken));
         response.setStatus(HttpStatus.OK.value());
     }

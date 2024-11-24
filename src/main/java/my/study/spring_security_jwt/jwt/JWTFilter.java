@@ -1,5 +1,6 @@
 package my.study.spring_security_jwt.jwt;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,30 +25,35 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        //request 에서 Authorization 헤더를 찾아 검증
-        String authorization = request.getHeader("Authorization");
+        //request 에서 AccessToken 을 찾아 검증
+        String accessToken = request.getHeader("access");
 
-        if(authorization == null || !authorization.startsWith("Bearer ")) {
-            log.info("token null");
-
+        if (accessToken == null || !accessToken.startsWith("Bearer ")) {
+            log.info("accessToken null");
             //조건이 해당되면 해당 필터 종료 (필수)
             filterChain.doFilter(request, response);
             return;
         }
 
-        log.info("authorization now");
-        //Bearer 부분 제거 후 순수 토큰만 획득
-        String token = authorization.split(" ")[1];
+        //토큰 만료 검증. 만료 시 프론트에 즉시 응답
+        try {
+            jwtUtil.isExpired(accessToken);
+        } catch (ExpiredJwtException e) {
+            response.getWriter().write("access token expired");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
 
-        //토큰 소멸 시간 검증
-        if(jwtUtil.isExpired(token)) {
-            filterChain.doFilter(request, response);
+        //토큰이 AccessToken 인지 확인
+        if(!jwtUtil.getCategory(accessToken).equals("access")){
+            response.getWriter().write("invalid access token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
         //토큰에서 username 과 role 획득하여 인증 토큰 생성
-        String username = jwtUtil.getUsername(token);
-        String role = jwtUtil.getRole(token);
+        String username = jwtUtil.getUsername(accessToken);
+        String role = jwtUtil.getRole(accessToken);
 
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(username);
