@@ -28,7 +28,7 @@ public class JWTFilter extends OncePerRequestFilter {
         //request 에서 AccessToken 을 찾아 검증
         String accessToken = request.getHeader("access");
 
-        if (accessToken == null || !accessToken.startsWith("Bearer ")) {
+        if (accessToken == null) {
             log.info("accessToken null");
             //조건이 해당되면 해당 필터 종료 (필수)
             filterChain.doFilter(request, response);
