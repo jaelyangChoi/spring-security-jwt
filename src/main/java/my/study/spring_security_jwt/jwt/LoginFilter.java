@@ -2,10 +2,12 @@ package my.study.spring_security_jwt.jwt;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import my.study.spring_security_jwt.dto.CustomUserDetails;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,14 +41,27 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String authority = userDetails.getAuthorities().iterator().next().getAuthority();
         long expiredMs = 60 * 60 * 10L;
 
-        String token = jwtUtil.createJwt(username, authority, expiredMs);
+        String accessToken = jwtUtil.createJwt("access", username, authority, 1000 * 60 * 10L);
+        String refreshToken = jwtUtil.createJwt("refresh", username, authority, 1000 * 60 * 60 * 24L);
 
         //발급 토큰 응답
-        response.addHeader("Authorization", "Bearer " + token);
+        response.setHeader("access", accessToken);
+        response.addCookie(createCookie("refresh", refreshToken));
+        response.setStatus(HttpStatus.OK.value());
     }
+
 
     @Override
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    private Cookie createCookie(String key, String value) {
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24 * 60 * 60);
+//        cookie.setPath("/");
+//        cookie.setSecure(true);
+        cookie.setHttpOnly(true); //JS로 쿠키 접근 불가
+        return cookie;
     }
 }
